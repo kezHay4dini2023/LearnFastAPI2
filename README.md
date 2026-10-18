@@ -1,0 +1,3 @@
+# FASTAPI PROJECT
+
+- initializing this. 

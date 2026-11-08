@@ -3,7 +3,14 @@ from fastapi.params import Body
 from pydantic import BaseModel
 from typing import Optional
 from random import randrange
+import psycopg2 # this is for posgres stuff 
+import mysql.connector
+from psycopg2.extras import RealDictCursor # this is for posgres stuff 
+import time
+import os 
+from dotenv import load_dotenv
 
+load_dotenv()
 app = FastAPI()
 
 
@@ -11,7 +18,25 @@ class Post(BaseModel):
     title: str
     content: str 
     published: bool = True
-    rating: Optional[int] = None
+
+while True: 
+
+    try: 
+        conn = mysql.connector.connect(
+            host = os.environ["DB_HOST"], 
+            port=int(os.environ["DB_PORT"]), 
+            user=os.environ["DB_USER"], 
+            password=os.environ["DB_PASSWORD"], 
+            database=os.environ["DB_NAME"])
+        cursor = conn.cursor(dictionary=True)
+        print("Database connection was successful")
+        break 
+
+    except Exception as error:
+        print("Connecting to Database failed")
+        print("Error: ", error)
+        time.sleep(2)
+
 
 
 my_posts = [{
@@ -49,7 +74,10 @@ async def root():
 # READ
 #retrieving method.
 @app.get("/posts")
-def get_post():
+def get_posts():
+    cursor.execute("""SELECT * FROM posts""")
+    posts = cursor.fetchall()
+    print(posts)
     return {"data": my_posts}
 
 
@@ -69,10 +97,17 @@ def get_post():
 # CREATE
 @app.post("/posts", status_code=status.HTTP_201_CREATED)
 def createPosts(post: Post):
-    post_dict = post.dict()
-    post_dict["id"] = randrange(0, 10000000)
-    my_posts.append(post_dict)
-    return {"data": post_dict}
+    cursor.execute("""INSERT INTO posts (title, content, published)
+    VALUES (%s, %s, %s)
+    """,
+    (post.title, post.content, post.published))
+    conn.commit()
+
+    new_post_id = cursor.lastrowid
+    cursor.execute("SELECT * FROM posts WHERE id = %s", (new_post_id,))
+    new_post = cursor.fetchone()
+
+    return {"data": new_post}
 
 # @app.get("/posts/latest")
 # def get_latest_post():
@@ -83,6 +118,12 @@ def createPosts(post: Post):
 
 @app.get("/posts/{id}")
 def get_post(id: int, response: Response):
+    cursor.execute("""
+        SELECT * from posts WHERE id = %s
+"""
+    , (str(id)),)
+    test_posts = cursor.fetchone()
+    print(test_posts)
     post = find_post(id)
 
     if not post:

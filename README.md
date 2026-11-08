@@ -3,16 +3,17 @@
 - initializing this. 
 
 
-now about CRUD (Create, Read, Update and Delete)
+
+CRUD (Create, Read, Update and Delete)
 
 
 Create - POST /posts
 @app.post("/posts")
 
 Read 
--GET /posts/:id
+- GET /posts/:id
 @app.get("/posts/{id}")
--GET /posts
+- GET /posts
 @app.get("/posts")
 
 
